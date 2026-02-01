@@ -1,4 +1,4 @@
-module github.com/Emelyanovalex/hw-test/tree/hw01_hello_otus/hw01_hello_otus
+module github.com/Emelyanovalex/hw-test/hw01_hello_otus
 
 go 1.23
 
