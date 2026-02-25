@@ -38,6 +38,5 @@ func Top10(input string) []string {
 	if len(topWords) < TopLimit {
 		return []string{}
 	}
-
 	return topWords
 }
