@@ -124,7 +124,7 @@ func TestRun(t *testing.T) {
 
 		workersCount := 0
 		maxErrorsCount := 1
-		var ErrTest = errors.New("errors limit exceeded")
+		ErrTest := errors.New("errors limit exceeded")
 
 		err := Run(tasks, workersCount, maxErrorsCount)
 		require.EqualError(t, err, ErrTest.Error(), "actual err - %v", err)
