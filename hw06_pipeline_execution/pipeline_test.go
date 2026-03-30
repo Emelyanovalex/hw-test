@@ -148,3 +148,71 @@ func TestAllStageStop(t *testing.T) {
 
 	})
 }
+
+func TestExecutePipelineWithoutStages(t *testing.T) {
+	in := make(Bi)
+
+	go func() {
+		defer close(in)
+		in <- 1
+		in <- 2
+		in <- 3
+	}()
+
+	var result []int
+	for v := range ExecutePipeline(in, nil) {
+		result = append(result, v.(int))
+	}
+
+	require.Equal(t, []int{1, 2, 3}, result)
+}
+
+func TestExecutePipelineWithSeveralStages(t *testing.T) {
+	multiplyBy2 := func(in In) Out {
+		out := make(Bi)
+		go func() {
+			defer close(out)
+			for v := range in {
+				out <- v.(int) * 2
+			}
+		}()
+		return out
+	}
+
+	addTen := func(in In) Out {
+		out := make(Bi)
+		go func() {
+			defer close(out)
+			for v := range in {
+				out <- v.(int) + 10
+			}
+		}()
+		return out
+	}
+
+	toString := func(in In) Out {
+		out := make(Bi)
+		go func() {
+			defer close(out)
+			for v := range in {
+				out <- strconv.Itoa(v.(int))
+			}
+		}()
+		return out
+	}
+
+	in := make(Bi)
+	go func() {
+		defer close(in)
+		in <- 1
+		in <- 2
+		in <- 3
+	}()
+
+	var result []string
+	for v := range ExecutePipeline(in, nil, multiplyBy2, addTen, toString) {
+		result = append(result, v.(string))
+	}
+
+	require.Equal(t, []string{"12", "14", "16"}, result)
+}
