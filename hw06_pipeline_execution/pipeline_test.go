@@ -56,10 +56,12 @@ func TestPipeline(t *testing.T) {
 		elapsed := time.Since(start)
 
 		require.Equal(t, []string{"102", "104", "106", "108", "110"}, result)
-		require.Less(t,
+		require.Less(
+			t,
 			int64(elapsed),
 			// ~0.8s for processing 5 values in 4 stages (100ms every) concurrently
-			int64(sleepPerStage)*int64(len(stages)+len(data)-1)+int64(fault))
+			int64(sleepPerStage)*int64(len(stages)+len(data)-1)+int64(fault),
+		)
 	})
 
 	t.Run("done case", func(t *testing.T) {
@@ -95,6 +97,7 @@ func TestPipeline(t *testing.T) {
 
 func TestAllStageStop(t *testing.T) {
 	wg := sync.WaitGroup{}
+
 	// Stage generator
 	g := func(_ string, f func(v interface{}) interface{}) Stage {
 		return func(in In) Out {
@@ -158,7 +161,7 @@ func TestExecutePipelineWithoutStages(t *testing.T) {
 		in <- 3
 	}()
 
-	var result []int
+	result := make([]int, 0, 3)
 	for v := range ExecutePipeline(in, nil) {
 		result = append(result, v.(int))
 	}
@@ -208,7 +211,7 @@ func TestExecutePipelineWithSeveralStages(t *testing.T) {
 		in <- 3
 	}()
 
-	var result []string
+	result := make([]string, 0, 3)
 	for v := range ExecutePipeline(in, nil, multiplyBy2, addTen, toString) {
 		result = append(result, v.(string))
 	}
