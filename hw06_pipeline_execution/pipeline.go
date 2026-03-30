@@ -39,7 +39,6 @@ func forwardUntilDone(done In, source Out) Out {
 				if !ok {
 					return
 				}
-
 				if !sendUntilDone(done, result, value) {
 					go drainChannel(source)
 					return
@@ -61,7 +60,10 @@ func sendUntilDone(done In, destination Bi, value interface{}) bool {
 }
 
 func drainChannel(source Out) {
-	for range source {
-		// drain source until it is closed
+	for {
+		_, ok := <-source
+		if !ok {
+			return
+		}
 	}
 }
