@@ -1,4 +1,4 @@
-module github.com/fixme_my_friend/hw10_program_optimization
+module github.com/Emelyanovalex/hw-test
 
 go 1.23
 
