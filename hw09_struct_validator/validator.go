@@ -74,15 +74,16 @@ func Validate(v interface{}) error {
 }
 
 func validateField(name string, value reflect.Value, tag string) (ValidationErrors, error) {
-	switch value.Kind() {
+	switch value.Kind() { //nolint:exhaustive
 	case reflect.String:
 		return validateStringField(name, value.String(), tag)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return validateIntField(name, value.Int(), tag)
 	case reflect.Slice:
 		return validateSliceField(name, value, tag)
+	default:
+		return nil, nil
 	}
-	return nil, nil
 }
 
 func validateStringField(name, s, tag string) (ValidationErrors, error) {
@@ -134,7 +135,7 @@ func validateStringLen(s, param string) (error, error) {
 func validateStringRegexp(s, pattern string) (error, error) {
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		return nil, fmt.Errorf("%w: invalid regexp %q: %v", ErrInvalidTag, pattern, err)
+		return nil, fmt.Errorf("%w: invalid regexp %q: %w", ErrInvalidTag, pattern, err)
 	}
 	if !re.MatchString(s) {
 		return fmt.Errorf("%w: %q does not match %q", ErrStringRegexp, s, pattern), nil
@@ -187,23 +188,23 @@ func validateIntField(name string, n int64, tag string) (ValidationErrors, error
 }
 
 func validateIntMin(n int64, param string) (error, error) {
-	min, err := strconv.ParseInt(param, 10, 64)
+	minVal, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("%w: min must be an integer, got %q", ErrInvalidTag, param)
 	}
-	if n < min {
-		return fmt.Errorf("%w: %d < %d", ErrIntMin, n, min), nil
+	if n < minVal {
+		return fmt.Errorf("%w: %d < %d", ErrIntMin, n, minVal), nil
 	}
 	return nil, nil
 }
 
 func validateIntMax(n int64, param string) (error, error) {
-	max, err := strconv.ParseInt(param, 10, 64)
+	maxVal, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("%w: max must be an integer, got %q", ErrInvalidTag, param)
 	}
-	if n > max {
-		return fmt.Errorf("%w: %d > %d", ErrIntMax, n, max), nil
+	if n > maxVal {
+		return fmt.Errorf("%w: %d > %d", ErrIntMax, n, maxVal), nil
 	}
 	return nil, nil
 }

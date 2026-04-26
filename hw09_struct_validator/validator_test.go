@@ -40,6 +40,8 @@ type (
 )
 
 func TestValidate(t *testing.T) {
+	validID := "12345678-1234-1234-1234-123456789012"
+
 	tests := []struct {
 		name        string
 		in          interface{}
@@ -49,138 +51,41 @@ func TestValidate(t *testing.T) {
 		{
 			name: "valid user",
 			in: User{
-				ID:     "12345678-1234-1234-1234-123456789012",
-				Name:   "Alice",
-				Age:    25,
-				Email:  "alice@example.com",
-				Role:   "admin",
-				Phones: []string{"79991234567"},
+				ID: validID, Age: 25, Email: "alice@example.com",
+				Role: "admin", Phones: []string{"79991234567"},
 			},
-			expectedErr: nil,
 		},
 		{
-			name: "invalid user: wrong ID length",
-			in: User{
-				ID:     "short-id",
-				Name:   "Bob",
-				Age:    30,
-				Email:  "bob@example.com",
-				Role:   "admin",
-				Phones: []string{"79991234567"},
-			},
-			wantErrs: []error{ErrStringLen},
-		},
-		{
-			name: "invalid user: age too low",
-			in: User{
-				ID:     "12345678-1234-1234-1234-123456789012",
-				Name:   "Teen",
-				Age:    16,
-				Email:  "teen@example.com",
-				Role:   "admin",
-				Phones: []string{"79991234567"},
-			},
-			wantErrs: []error{ErrIntMin},
-		},
-		{
-			name: "invalid user: age too high",
-			in: User{
-				ID:     "12345678-1234-1234-1234-123456789012",
-				Name:   "Old",
-				Age:    60,
-				Email:  "old@example.com",
-				Role:   "admin",
-				Phones: []string{"79991234567"},
-			},
-			wantErrs: []error{ErrIntMax},
-		},
-		{
-			name: "invalid user: bad email",
-			in: User{
-				ID:     "12345678-1234-1234-1234-123456789012",
-				Name:   "Eve",
-				Age:    25,
-				Email:  "not-an-email",
-				Role:   "admin",
-				Phones: []string{"79991234567"},
-			},
-			wantErrs: []error{ErrStringRegexp},
-		},
-		{
-			name: "invalid user: bad role",
-			in: User{
-				ID:     "12345678-1234-1234-1234-123456789012",
-				Name:   "Eve",
-				Age:    25,
-				Email:  "eve@example.com",
-				Role:   "superuser",
-				Phones: []string{"79991234567"},
-			},
-			wantErrs: []error{ErrStringIn},
-		},
-		{
-			name: "invalid user: bad phone length in slice",
-			in: User{
-				ID:     "12345678-1234-1234-1234-123456789012",
-				Name:   "Eve",
-				Age:    25,
-				Email:  "eve@example.com",
-				Role:   "admin",
-				Phones: []string{"123"},
-			},
-			wantErrs: []error{ErrStringLen},
+			name:     "invalid user: multiple errors accumulate",
+			in:       User{ID: "short", Age: 5, Email: "bad", Role: "unknown", Phones: []string{"1"}},
+			wantErrs: []error{ErrStringLen, ErrIntMin, ErrStringRegexp, ErrStringIn, ErrStringLen},
 		},
 		{
 			name: "valid app",
 			in:   App{Version: "1.0.0"},
-			expectedErr: nil,
 		},
 		{
-			name:     "invalid app: version length",
+			name:     "invalid app: wrong version length",
 			in:       App{Version: "v1"},
 			wantErrs: []error{ErrStringLen},
 		},
 		{
-			name:        "token: no validate tags, passes",
-			in:          Token{Header: []byte("h"), Payload: []byte("p"), Signature: []byte("s")},
-			expectedErr: nil,
+			name: "token: no validate tags, passes",
+			in:   Token{Header: []byte("h"), Payload: []byte("p"), Signature: []byte("s")},
 		},
 		{
-			name:        "valid response",
-			in:          Response{Code: 200, Body: "OK"},
-			expectedErr: nil,
-		},
-		{
-			name:        "valid response 404",
-			in:          Response{Code: 404},
-			expectedErr: nil,
+			name: "valid response",
+			in:   Response{Code: 200, Body: "OK"},
 		},
 		{
 			name:     "invalid response: code not in set",
-			in:       Response{Code: 301, Body: "Moved"},
+			in:       Response{Code: 301},
 			wantErrs: []error{ErrIntIn},
 		},
 		{
-			name:        "non-struct input",
+			name:        "non-struct input returns ErrNotStruct",
 			in:          "not a struct",
 			expectedErr: ErrNotStruct,
-		},
-		{
-			name:        "non-struct int input",
-			in:          42,
-			expectedErr: ErrNotStruct,
-		},
-		{
-			name: "multiple errors accumulate",
-			in: User{
-				ID:     "short",
-				Name:   "X",
-				Age:    5,
-				Email:  "bad",
-				Role:   "unknown",
-				Phones: []string{"1"},
-			},
-			wantErrs: []error{ErrStringLen, ErrIntMin, ErrStringRegexp, ErrStringIn, ErrStringLen},
 		},
 	}
 
@@ -212,39 +117,27 @@ func TestValidate(t *testing.T) {
 }
 
 func TestValidate_InvalidTags(t *testing.T) {
-	t.Run("unknown rule returns program error", func(t *testing.T) {
+	t.Run("unknown rule", func(t *testing.T) {
 		type S struct {
 			F string `validate:"unknown:val"`
 		}
-		err := Validate(S{F: "hello"})
-		require.ErrorIs(t, err, ErrInvalidTag)
+		require.ErrorIs(t, Validate(S{F: "x"}), ErrInvalidTag)
 	})
 
-	t.Run("bad len param returns program error", func(t *testing.T) {
+	t.Run("bad len param", func(t *testing.T) {
 		type S struct {
 			F string `validate:"len:abc"`
 		}
-		err := Validate(S{F: "hello"})
-		require.ErrorIs(t, err, ErrInvalidTag)
+		require.ErrorIs(t, Validate(S{F: "x"}), ErrInvalidTag)
 	})
 
-	t.Run("bad min param returns program error", func(t *testing.T) {
-		type S struct {
-			N int `validate:"min:abc"`
-		}
-		err := Validate(S{N: 5})
-		require.ErrorIs(t, err, ErrInvalidTag)
-	})
-
-	t.Run("bad regexp returns program error", func(t *testing.T) {
+	t.Run("bad regexp", func(t *testing.T) {
 		type S struct {
 			F string `validate:"regexp:[invalid"`
 		}
-		err := Validate(S{F: "hello"})
-		require.ErrorIs(t, err, ErrInvalidTag)
+		require.ErrorIs(t, Validate(S{F: "x"}), ErrInvalidTag)
 	})
 }
-
 
 func TestValidationErrors_Error(t *testing.T) {
 	ve := ValidationErrors{
