@@ -1,4 +1,4 @@
-module github.com/Emelyanovalex/hw-test
+module github.com/Emelyanovalex/hw-test/hw10_program_optimization
 
 go 1.23
 
