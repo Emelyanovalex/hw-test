@@ -62,4 +62,91 @@ func TestTelnetClient(t *testing.T) {
 
 		wg.Wait()
 	})
+
+	t.Run("connection refused", func(t *testing.T) {
+		l, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		addr := l.Addr().String()
+		require.NoError(t, l.Close())
+
+		client := NewTelnetClient(addr, time.Second, io.NopCloser(&bytes.Buffer{}), &bytes.Buffer{})
+		err = client.Connect()
+		require.Error(t, err)
+	})
+
+	t.Run("server closes connection immediately", func(t *testing.T) {
+		l, err := net.Listen("tcp", "127.0.0.1:")
+		require.NoError(t, err)
+		defer l.Close()
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		go func() {
+			defer wg.Done()
+			out := &bytes.Buffer{}
+			client := NewTelnetClient(l.Addr().String(), 5*time.Second, io.NopCloser(&bytes.Buffer{}), out)
+			require.NoError(t, client.Connect())
+			defer client.Close()
+
+			err := client.Receive()
+			require.NoError(t, err)
+			require.Equal(t, "", out.String())
+		}()
+
+		go func() {
+			defer wg.Done()
+			conn, err := l.Accept()
+			require.NoError(t, err)
+			conn.Close()
+		}()
+
+		wg.Wait()
+	})
+
+	t.Run("multiple messages", func(t *testing.T) {
+		l, err := net.Listen("tcp", "127.0.0.1:")
+		require.NoError(t, err)
+		defer l.Close()
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		go func() {
+			defer wg.Done()
+			in := &bytes.Buffer{}
+			out := &bytes.Buffer{}
+			in.WriteString("line1\nline2\nline3\n")
+
+			client := NewTelnetClient(l.Addr().String(), 5*time.Second, io.NopCloser(in), out)
+			require.NoError(t, client.Connect())
+			defer client.Close()
+
+			require.NoError(t, client.Send())
+			require.NoError(t, client.Receive())
+			require.Equal(t, "ok\n", out.String())
+		}()
+
+		go func() {
+			defer wg.Done()
+			conn, err := l.Accept()
+			require.NoError(t, err)
+			defer conn.Close()
+
+			buf := make([]byte, 1024)
+			n, err := conn.Read(buf)
+			require.NoError(t, err)
+			require.Equal(t, "line1\nline2\nline3\n", string(buf[:n]))
+
+			_, err = conn.Write([]byte("ok\n"))
+			require.NoError(t, err)
+		}()
+
+		wg.Wait()
+	})
+
+	t.Run("close before connect", func(t *testing.T) {
+		client := NewTelnetClient("127.0.0.1:1234", time.Second, io.NopCloser(&bytes.Buffer{}), &bytes.Buffer{})
+		require.NoError(t, client.Close())
+	})
 }
