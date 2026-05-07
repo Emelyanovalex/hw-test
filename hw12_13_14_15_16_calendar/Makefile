@@ -58,8 +58,10 @@ version: build
 test:
 	go test -race -count 100 ./internal/...
 
+GOLANGCI_LINT_VERSION ?= v1.63.4
+
 install-lint-deps:
-	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.57.2
+	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin $(GOLANGCI_LINT_VERSION)
 
 lint: install-lint-deps
 	golangci-lint run ./...
