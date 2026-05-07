@@ -3,21 +3,23 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/app"
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/logger"
-	internalhttp "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/server/http"
-	memorystorage "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/storage/memory"
+	"github.com/Emelyanovalex/hw-test/internal/app"
+	"github.com/Emelyanovalex/hw-test/internal/logger"
+	internalhttp "github.com/Emelyanovalex/hw-test/internal/server/http"
+	memorystorage "github.com/Emelyanovalex/hw-test/internal/storage/memory"
+	sqlstorage "github.com/Emelyanovalex/hw-test/internal/storage/sql"
 )
 
 var configFile string
 
 func init() {
-	flag.StringVar(&configFile, "config", "/etc/calendar/config.toml", "Path to configuration file")
+	flag.StringVar(&configFile, "config", "/etc/calendar/config.yaml", "Path to configuration file")
 }
 
 func main() {
@@ -28,13 +30,31 @@ func main() {
 		return
 	}
 
-	config := NewConfig()
-	logg := logger.New(config.Logger.Level)
+	cfg, err := LoadConfig(configFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "load config: %v\n", err)
+		os.Exit(1)
+	}
 
-	storage := memorystorage.New()
+	logg := logger.New(cfg.Logger.Level)
+	defer func() { _ = logg.Sync() }()
+
+	storage, cleanup, err := buildStorage(cfg)
+	if err != nil {
+		logg.Error("failed to init storage: " + err.Error())
+		os.Exit(1)
+	}
+	defer cleanup()
+
 	calendar := app.New(logg, storage)
 
-	server := internalhttp.NewServer(logg, calendar)
+	server := internalhttp.NewServer(logg, calendar, internalhttp.Config{
+		Host:            cfg.HTTP.Host,
+		Port:            cfg.HTTP.Port,
+		ReadTimeout:     cfg.HTTP.ReadTimeout,
+		WriteTimeout:    cfg.HTTP.WriteTimeout,
+		ShutdownTimeout: cfg.HTTP.ShutdownTimeout,
+	})
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -43,10 +63,14 @@ func main() {
 	go func() {
 		<-ctx.Done()
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-		defer cancel()
+		shutdownTimeout := cfg.HTTP.ShutdownTimeout
+		if shutdownTimeout <= 0 {
+			shutdownTimeout = 3 * time.Second
+		}
+		stopCtx, stopCancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer stopCancel()
 
-		if err := server.Stop(ctx); err != nil {
+		if err := server.Stop(stopCtx); err != nil {
 			logg.Error("failed to stop http server: " + err.Error())
 		}
 	}()
@@ -57,5 +81,27 @@ func main() {
 		logg.Error("failed to start http server: " + err.Error())
 		cancel()
 		os.Exit(1) //nolint:gocritic
+	}
+}
+
+func buildStorage(cfg Config) (app.Storage, func(), error) {
+	switch cfg.Storage.Kind {
+	case "", "memory":
+		return memorystorage.New(), func() {}, nil
+	case "sql":
+		s := sqlstorage.New(cfg.Database.DSN)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := s.Connect(ctx); err != nil {
+			return nil, nil, err
+		}
+		cleanup := func() {
+			closeCtx, closeCancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer closeCancel()
+			_ = s.Close(closeCtx)
+		}
+		return s, cleanup, nil
+	default:
+		return nil, nil, fmt.Errorf("unknown storage kind %q", cfg.Storage.Kind)
 	}
 }

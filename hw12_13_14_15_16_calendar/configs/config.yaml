@@ -1,5 +1,18 @@
-[logger]
-level = "INFO"
+logger:
+  level: info
 
-# TODO
-# ...
+http:
+  host: 0.0.0.0
+  port: 8080
+  read_timeout: 5s
+  write_timeout: 10s
+  shutdown_timeout: 3s
+
+storage:
+  # Allowed values: memory, sql
+  kind: memory
+
+database:
+  # Used only when storage.kind == "sql".
+  # Example: postgres://postgres:password@localhost:5435/calendar?sslmode=disable
+  dsn: ""
