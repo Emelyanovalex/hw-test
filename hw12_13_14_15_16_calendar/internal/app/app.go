@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/Emelyanovalex/hw-test/internal/storage"
+	"github.com/Emelyanovalex/hw12_calendar/internal/storage"
 )
 
 // Logger is the minimal logger surface required by the app.

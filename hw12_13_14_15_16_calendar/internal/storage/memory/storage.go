@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Emelyanovalex/hw-test/internal/storage"
+	"github.com/Emelyanovalex/hw12_calendar/internal/storage"
 )
 
 type Storage struct {

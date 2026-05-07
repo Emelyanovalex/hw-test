@@ -67,7 +67,7 @@ linters-settings:
       main:
         allow:
           - $gostd
-          - github.com/Emelyanovalex/hw-test
+          - github.com/Emelyanovalex/hw12_calendar
           - github.com/spf13/viper
           - github.com/stretchr/testify
           - go.uber.org/zap

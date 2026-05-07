@@ -1,4 +1,4 @@
-module github.com/Emelyanovalex/hw-test
+module github.com/Emelyanovalex/hw12_calendar
 
 go 1.23
 

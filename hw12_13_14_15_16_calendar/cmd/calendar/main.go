@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Emelyanovalex/hw-test/internal/app"
-	"github.com/Emelyanovalex/hw-test/internal/logger"
-	internalhttp "github.com/Emelyanovalex/hw-test/internal/server/http"
-	memorystorage "github.com/Emelyanovalex/hw-test/internal/storage/memory"
-	sqlstorage "github.com/Emelyanovalex/hw-test/internal/storage/sql"
+	"github.com/Emelyanovalex/hw12_calendar/internal/app"
+	"github.com/Emelyanovalex/hw12_calendar/internal/logger"
+	internalhttp "github.com/Emelyanovalex/hw12_calendar/internal/server/http"
+	memorystorage "github.com/Emelyanovalex/hw12_calendar/internal/storage/memory"
+	sqlstorage "github.com/Emelyanovalex/hw12_calendar/internal/storage/sql"
 )
 
 var configFile string

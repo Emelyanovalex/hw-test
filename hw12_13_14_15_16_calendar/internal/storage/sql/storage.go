@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Emelyanovalex/hw-test/internal/storage"
+	"github.com/Emelyanovalex/hw12_calendar/internal/storage"
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
 	"github.com/jmoiron/sqlx"
 )

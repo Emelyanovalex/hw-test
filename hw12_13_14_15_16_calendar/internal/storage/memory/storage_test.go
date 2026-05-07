@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Emelyanovalex/hw-test/internal/storage"
+	"github.com/Emelyanovalex/hw12_calendar/internal/storage"
 	"github.com/stretchr/testify/require"
 )
 
