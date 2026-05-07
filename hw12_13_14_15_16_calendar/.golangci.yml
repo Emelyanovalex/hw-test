@@ -19,7 +19,7 @@ linters:
     - gocyclo
     - gofmt
     - goimports
-    - mnd
+    - gomnd
     - goprintffuncname
     - gosec
     - gosimple
@@ -50,7 +50,7 @@ issues:
         - funlen
         - gocyclo
         - gosec
-        - mnd
+        - gomnd
         - lll
         - goconst
 
