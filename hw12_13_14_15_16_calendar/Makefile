@@ -4,20 +4,21 @@ DOCKER_IMG="calendar:develop"
 GIT_HASH := $(shell git log --format="%h" -n 1)
 LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X main.gitHash=$(GIT_HASH)
 
-#Postrges
+# Postgres
 POSTGRES_USER ?= postgres
 POSTGRES_PASSWORD ?= password
-POSTGRES_DB ?= backend
+POSTGRES_DB ?= calendar
 POSTGRES_PORT ?= 5435
+POSTGRES_HOST ?= localhost
 POSTGRES_CONTAINER := postgres-calendar
+POSTGRES_DSN ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
 
-#Rabbit
+# RabbitMQ (used in later homework)
 RABBIT_USER ?= rabbit
 RABBIT_PASSWORD ?= password
 RABBIT_PORT ?= 5672
 RABBIT_PORT_UI ?= 15672
 RABBIT_CONTAINER := rabbitmq
-
 
 run-postgres:
 	docker run -d --name $(POSTGRES_CONTAINER) \
@@ -26,7 +27,7 @@ run-postgres:
 	-e POSTGRES_DB=$(POSTGRES_DB) \
 	-p $(POSTGRES_PORT):5432 \
 	-v postgres-data:/var/lib/postgresql/data \
-	postgres:latest
+	postgres:16
 
 run-rabbit:
 	docker run -d --name $(RABBIT_CONTAINER) \
@@ -40,7 +41,7 @@ build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
 
 run: build
-	$(BIN) -config ./configs/config.toml
+	$(BIN) -config ./configs/config.yaml
 
 build-img:
 	docker build \
@@ -55,12 +56,20 @@ version: build
 	$(BIN) version
 
 test:
-	go test -race ./internal/... ./pkg/...
+	go test -race -count 100 ./internal/...
+
+GOLANGCI_LINT_VERSION ?= v1.63.4
 
 install-lint-deps:
-	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.57.2
+	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin $(GOLANGCI_LINT_VERSION)
 
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run build-img run-img version test lint
+install-goose:
+	(which goose > /dev/null) || go install github.com/pressly/goose/v3/cmd/goose@latest
+
+migrate: install-goose
+	goose -dir ./migrations postgres "$(POSTGRES_DSN)" up
+
+.PHONY: build run build-img run-img version test lint install-lint-deps install-goose migrate run-postgres run-rabbit
