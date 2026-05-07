@@ -39,6 +39,8 @@ type DatabaseConf struct {
 	DSN string `mapstructure:"dsn"`
 }
 
+const defaultHTTPPort = 8080
+
 // LoadConfig reads configuration from the given file path. The format is
 // inferred from the file extension. Environment variables prefixed with
 // CALENDAR_ override file values (e.g. CALENDAR_HTTP_PORT).
@@ -47,7 +49,7 @@ func LoadConfig(path string) (Config, error) {
 
 	v.SetDefault("logger.level", "info")
 	v.SetDefault("http.host", "0.0.0.0")
-	v.SetDefault("http.port", 8080)
+	v.SetDefault("http.port", defaultHTTPPort)
 	v.SetDefault("http.read_timeout", "5s")
 	v.SetDefault("http.write_timeout", "10s")
 	v.SetDefault("http.shutdown_timeout", "3s")

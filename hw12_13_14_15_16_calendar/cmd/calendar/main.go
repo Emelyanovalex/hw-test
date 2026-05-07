@@ -16,6 +16,12 @@ import (
 	sqlstorage "github.com/Emelyanovalex/hw12_calendar/internal/storage/sql"
 )
 
+const (
+	dbConnectTimeout       = 5 * time.Second
+	dbCloseTimeout         = 3 * time.Second
+	defaultShutdownTimeout = 3 * time.Second
+)
+
 var configFile string
 
 func init() {
@@ -30,23 +36,28 @@ func main() {
 		return
 	}
 
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	cfg, err := LoadConfig(configFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "load config: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	logg := logger.New(cfg.Logger.Level)
 	defer func() { _ = logg.Sync() }()
 
-	storage, cleanup, err := buildStorage(cfg)
+	stor, cleanup, err := buildStorage(cfg)
 	if err != nil {
-		logg.Error("failed to init storage: " + err.Error())
-		os.Exit(1)
+		return fmt.Errorf("init storage: %w", err)
 	}
 	defer cleanup()
 
-	calendar := app.New(logg, storage)
+	calendar := app.New(logg, stor)
 
 	server := internalhttp.NewServer(logg, calendar, internalhttp.Config{
 		Host:            cfg.HTTP.Host,
@@ -65,23 +76,22 @@ func main() {
 
 		shutdownTimeout := cfg.HTTP.ShutdownTimeout
 		if shutdownTimeout <= 0 {
-			shutdownTimeout = 3 * time.Second
+			shutdownTimeout = defaultShutdownTimeout
 		}
 		stopCtx, stopCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer stopCancel()
 
-		if err := server.Stop(stopCtx); err != nil {
-			logg.Error("failed to stop http server: " + err.Error())
+		if stopErr := server.Stop(stopCtx); stopErr != nil {
+			logg.Error("failed to stop http server: " + stopErr.Error())
 		}
 	}()
 
 	logg.Info("calendar is running...")
 
 	if err := server.Start(ctx); err != nil {
-		logg.Error("failed to start http server: " + err.Error())
-		cancel()
-		os.Exit(1) //nolint:gocritic
+		return fmt.Errorf("http server: %w", err)
 	}
+	return nil
 }
 
 func buildStorage(cfg Config) (app.Storage, func(), error) {
@@ -90,13 +100,13 @@ func buildStorage(cfg Config) (app.Storage, func(), error) {
 		return memorystorage.New(), func() {}, nil
 	case "sql":
 		s := sqlstorage.New(cfg.Database.DSN)
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), dbConnectTimeout)
 		defer cancel()
 		if err := s.Connect(ctx); err != nil {
 			return nil, nil, err
 		}
 		cleanup := func() {
-			closeCtx, closeCancel := context.WithTimeout(context.Background(), 3*time.Second)
+			closeCtx, closeCancel := context.WithTimeout(context.Background(), dbCloseTimeout)
 			defer closeCancel()
 			_ = s.Close(closeCtx)
 		}

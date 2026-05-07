@@ -8,6 +8,8 @@ import (
 	"github.com/Emelyanovalex/hw12_calendar/internal/storage"
 )
 
+const daysInWeek = 7
+
 type Storage struct {
 	mu     sync.RWMutex
 	events map[string]storage.Event
@@ -68,7 +70,7 @@ func (s *Storage) ListEventsForDay(ctx context.Context, date time.Time) ([]stora
 
 func (s *Storage) ListEventsForWeek(ctx context.Context, weekStart time.Time) ([]storage.Event, error) {
 	start := truncateToDay(weekStart)
-	return s.listInRange(ctx, start, start.AddDate(0, 0, 7))
+	return s.listInRange(ctx, start, start.AddDate(0, 0, daysInWeek))
 }
 
 func (s *Storage) ListEventsForMonth(ctx context.Context, monthStart time.Time) ([]storage.Event, error) {

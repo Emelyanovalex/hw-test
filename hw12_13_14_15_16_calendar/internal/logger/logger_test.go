@@ -12,7 +12,7 @@ func TestParseLevel(t *testing.T) {
 		"debug":   zapcore.DebugLevel,
 		"DEBUG":   zapcore.DebugLevel,
 		"info":    zapcore.InfoLevel,
-		" INFO ":  zapcore.InfoLevel,
+		" INFO ":  zapcore.InfoLevel, //nolint:gocritic // intentional: testing space-trimming
 		"warn":    zapcore.WarnLevel,
 		"warning": zapcore.WarnLevel,
 		"error":   zapcore.ErrorLevel,
