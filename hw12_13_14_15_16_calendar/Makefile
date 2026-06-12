@@ -37,6 +37,13 @@ run-rabbit:
 	-e RABBITMQ_DEFAULT_PASS=$(RABBIT_PASSWORD) \
 	rabbitmq:management
 
+install-proto-deps:
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+generate: install-proto-deps
+	go generate ./...
+
 build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
 
@@ -72,4 +79,4 @@ install-goose:
 migrate: install-goose
 	goose -dir ./migrations postgres "$(POSTGRES_DSN)" up
 
-.PHONY: build run build-img run-img version test lint install-lint-deps install-goose migrate run-postgres run-rabbit
+.PHONY: build run build-img run-img version test lint install-lint-deps install-goose migrate run-postgres run-rabbit install-proto-deps generate

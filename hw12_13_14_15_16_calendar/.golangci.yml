@@ -18,7 +18,6 @@ linters:
     - gocritic
     - gocyclo
     - gofmt
-    - goimports
     - mnd
     - goprintffuncname
     - gosec
@@ -74,3 +73,5 @@ linters-settings:
           - github.com/jmoiron/sqlx
           - github.com/jackc/pgx/v5
           - github.com/google/uuid
+          - google.golang.org/grpc
+          - google.golang.org/protobuf

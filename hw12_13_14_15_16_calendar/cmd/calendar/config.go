@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Logger   LoggerConf   `mapstructure:"logger"`
 	HTTP     HTTPConf     `mapstructure:"http"`
+	GRPC     GRPCConf     `mapstructure:"grpc"`
 	Storage  StorageConf  `mapstructure:"storage"`
 	Database DatabaseConf `mapstructure:"database"`
 }
@@ -28,6 +29,11 @@ type HTTPConf struct {
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
 }
 
+type GRPCConf struct {
+	Host string `mapstructure:"host"`
+	Port int    `mapstructure:"port"`
+}
+
 // StorageConf chooses which storage implementation to use.
 // Allowed values: "memory", "sql".
 type StorageConf struct {
@@ -39,7 +45,10 @@ type DatabaseConf struct {
 	DSN string `mapstructure:"dsn"`
 }
 
-const defaultHTTPPort = 8080
+const (
+	defaultHTTPPort = 8080
+	defaultGRPCPort = 9090
+)
 
 // LoadConfig reads configuration from the given file path. The format is
 // inferred from the file extension. Environment variables prefixed with
@@ -53,6 +62,8 @@ func LoadConfig(path string) (Config, error) {
 	v.SetDefault("http.read_timeout", "5s")
 	v.SetDefault("http.write_timeout", "10s")
 	v.SetDefault("http.shutdown_timeout", "3s")
+	v.SetDefault("grpc.host", "0.0.0.0")
+	v.SetDefault("grpc.port", defaultGRPCPort)
 	v.SetDefault("storage.kind", "memory")
 	v.SetDefault("database.dsn", "")
 

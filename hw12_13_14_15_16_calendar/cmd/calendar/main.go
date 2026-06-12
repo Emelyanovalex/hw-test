@@ -11,6 +11,7 @@ import (
 
 	"github.com/Emelyanovalex/hw12_calendar/internal/app"
 	"github.com/Emelyanovalex/hw12_calendar/internal/logger"
+	internalgrpc "github.com/Emelyanovalex/hw12_calendar/internal/server/grpc"
 	internalhttp "github.com/Emelyanovalex/hw12_calendar/internal/server/http"
 	memorystorage "github.com/Emelyanovalex/hw12_calendar/internal/storage/memory"
 	sqlstorage "github.com/Emelyanovalex/hw12_calendar/internal/storage/sql"
@@ -59,12 +60,17 @@ func run() error {
 
 	calendar := app.New(logg, stor)
 
-	server := internalhttp.NewServer(logg, calendar, internalhttp.Config{
+	httpServer := internalhttp.NewServer(logg, calendar, internalhttp.Config{
 		Host:            cfg.HTTP.Host,
 		Port:            cfg.HTTP.Port,
 		ReadTimeout:     cfg.HTTP.ReadTimeout,
 		WriteTimeout:    cfg.HTTP.WriteTimeout,
 		ShutdownTimeout: cfg.HTTP.ShutdownTimeout,
+	})
+
+	grpcServer := internalgrpc.NewServer(logg, calendar, internalgrpc.Config{
+		Host: cfg.GRPC.Host,
+		Port: cfg.GRPC.Port,
 	})
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
@@ -81,14 +87,23 @@ func run() error {
 		stopCtx, stopCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer stopCancel()
 
-		if stopErr := server.Stop(stopCtx); stopErr != nil {
+		if stopErr := httpServer.Stop(stopCtx); stopErr != nil {
 			logg.Error("failed to stop http server: " + stopErr.Error())
+		}
+		if stopErr := grpcServer.Stop(stopCtx); stopErr != nil {
+			logg.Error("failed to stop grpc server: " + stopErr.Error())
+		}
+	}()
+
+	go func() {
+		if startErr := grpcServer.Start(ctx); startErr != nil {
+			logg.Error("grpc server error: " + startErr.Error())
 		}
 	}()
 
 	logg.Info("calendar is running...")
 
-	if err := server.Start(ctx); err != nil {
+	if err := httpServer.Start(ctx); err != nil {
 		return fmt.Errorf("http server: %w", err)
 	}
 	return nil
