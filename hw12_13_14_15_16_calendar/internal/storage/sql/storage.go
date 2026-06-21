@@ -144,6 +144,62 @@ func (s *Storage) listInRange(ctx context.Context, from, to time.Time) ([]storag
 	return result, nil
 }
 
+func (s *Storage) ListEventsToNotify(ctx context.Context, now time.Time) ([]storage.Event, error) {
+	const q = `
+		SELECT id, title, start_time, duration, description, user_id, notify_before
+		FROM events
+		WHERE notify_before > 0
+		  AND notified = FALSE
+		  AND start_time - make_interval(secs => notify_before::float8 / 1e9) <= $1
+		ORDER BY start_time
+	`
+	rows, err := s.db.QueryxContext(ctx, q, now)
+	if err != nil {
+		return nil, fmt.Errorf("list events to notify: %w", err)
+	}
+	defer rows.Close()
+
+	var result []storage.Event
+	for rows.Next() {
+		var (
+			e            storage.Event
+			duration     int64
+			notifyBefore int64
+		)
+		if err := rows.Scan(&e.ID, &e.Title, &e.StartTime, &duration,
+			&e.Description, &e.UserID, &notifyBefore); err != nil {
+			return nil, fmt.Errorf("scan event: %w", err)
+		}
+		e.Duration = time.Duration(duration)
+		e.NotifyBefore = time.Duration(notifyBefore)
+		result = append(result, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate events: %w", err)
+	}
+	return result, nil
+}
+
+func (s *Storage) MarkEventNotified(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE events SET notified = TRUE WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("mark event notified: %w", err)
+	}
+	return nil
+}
+
+func (s *Storage) DeleteOldEvents(ctx context.Context, before time.Time) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM events WHERE start_time < $1`, before)
+	if err != nil {
+		return 0, fmt.Errorf("delete old events: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("rows affected: %w", err)
+	}
+	return n, nil
+}
+
 func (s *Storage) assertNoOverlap(ctx context.Context, e storage.Event, ignoreID string) error {
 	const q = `
 		SELECT 1 FROM events

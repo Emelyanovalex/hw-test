@@ -107,6 +107,49 @@ func (s *Storage) hasOverlap(candidate storage.Event, ignoreID string) bool {
 	return false
 }
 
+func (s *Storage) ListEventsToNotify(_ context.Context, now time.Time) ([]storage.Event, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var result []storage.Event
+	for _, e := range s.events {
+		if e.NotifyBefore <= 0 || e.Notified {
+			continue
+		}
+		if !now.Before(e.StartTime.Add(-e.NotifyBefore)) {
+			result = append(result, e)
+		}
+	}
+	return result, nil
+}
+
+func (s *Storage) MarkEventNotified(_ context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	e, ok := s.events[id]
+	if !ok {
+		return storage.ErrEventNotFound
+	}
+	e.Notified = true
+	s.events[id] = e
+	return nil
+}
+
+func (s *Storage) DeleteOldEvents(_ context.Context, before time.Time) (int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var count int64
+	for id, e := range s.events {
+		if e.StartTime.Before(before) {
+			delete(s.events, id)
+			count++
+		}
+	}
+	return count, nil
+}
+
 func truncateToDay(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }

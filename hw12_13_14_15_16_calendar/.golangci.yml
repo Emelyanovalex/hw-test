@@ -54,6 +54,10 @@ issues:
         - goconst
 
 linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
   funlen:
     lines: 150
     statements: 80
@@ -75,3 +79,4 @@ linters-settings:
           - github.com/google/uuid
           - google.golang.org/grpc
           - google.golang.org/protobuf
+          - github.com/rabbitmq/amqp091-go

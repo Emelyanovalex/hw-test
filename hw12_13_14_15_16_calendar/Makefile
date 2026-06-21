@@ -1,4 +1,6 @@
-BIN := "./bin/calendar"
+BIN_CALENDAR   := "./bin/calendar"
+BIN_SCHEDULER  := "./bin/calendar_scheduler"
+BIN_SENDER     := "./bin/calendar_sender"
 DOCKER_IMG="calendar:develop"
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
@@ -45,10 +47,12 @@ generate: install-proto-deps
 	go generate ./...
 
 build:
-	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
+	go build -v -o $(BIN_CALENDAR)  -ldflags "$(LDFLAGS)" ./cmd/calendar
+	go build -v -o $(BIN_SCHEDULER) -ldflags "$(LDFLAGS)" ./cmd/calendar_scheduler
+	go build -v -o $(BIN_SENDER)    -ldflags "$(LDFLAGS)" ./cmd/calendar_sender
 
 run: build
-	$(BIN) -config ./configs/config.yaml
+	$(BIN_CALENDAR) -config ./configs/config.yaml
 
 build-img:
 	docker build \
@@ -60,7 +64,7 @@ run-img: build-img
 	docker run $(DOCKER_IMG)
 
 version: build
-	$(BIN) version
+	$(BIN_CALENDAR) version
 
 test:
 	go test -race -count 100 ./internal/...
@@ -80,3 +84,4 @@ migrate: install-goose
 	goose -dir ./migrations postgres "$(POSTGRES_DSN)" up
 
 .PHONY: build run build-img run-img version test lint install-lint-deps install-goose migrate run-postgres run-rabbit install-proto-deps generate
+

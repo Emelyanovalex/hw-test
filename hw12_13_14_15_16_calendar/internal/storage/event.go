@@ -19,4 +19,5 @@ type Event struct {
 	Description  string        `db:"description"   json:"description,omitempty"`
 	UserID       string        `db:"user_id"       json:"user_id"`
 	NotifyBefore time.Duration `db:"notify_before" json:"notify_before,omitempty"`
+	Notified     bool          `db:"notified"      json:"-"`
 }
