@@ -43,7 +43,17 @@ func run() error {
 	}
 	defer func() { _ = consumer.Close() }()
 
-	s := sender.New(consumer, logg)
+	var sw sender.StatusWriter
+	if cfg.Database.DSN != "" {
+		dbLog, dbErr := sender.NewDBLog(cfg.Database.DSN)
+		if dbErr != nil {
+			return fmt.Errorf("init db log: %w", dbErr)
+		}
+		defer func() { _ = dbLog.Close() }()
+		sw = dbLog
+	}
+
+	s := sender.New(consumer, logg, sw)
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)

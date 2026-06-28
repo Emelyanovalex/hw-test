@@ -83,5 +83,24 @@ install-goose:
 migrate: install-goose
 	goose -dir ./migrations postgres "$(POSTGRES_DSN)" up
 
-.PHONY: build run build-img run-img version test lint install-lint-deps install-goose migrate run-postgres run-rabbit install-proto-deps generate
+up:
+	docker compose -f deployments/docker-compose.yaml up -d --build
+
+down:
+	docker compose -f deployments/docker-compose.yaml down -v
+
+integration-tests:
+	docker compose \
+		-f deployments/docker-compose.yaml \
+		-f deployments/docker-compose.test.yaml \
+		up --build --abort-on-container-exit --exit-code-from integration-tests; \
+	EXIT_CODE=$$?; \
+	docker compose \
+		-f deployments/docker-compose.yaml \
+		-f deployments/docker-compose.test.yaml \
+		down -v; \
+	exit $$EXIT_CODE
+
+.PHONY: build run build-img run-img version test lint install-lint-deps install-goose migrate \
+        run-postgres run-rabbit install-proto-deps generate up down integration-tests
 

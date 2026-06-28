@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Logger   LoggerConf   `mapstructure:"logger"`
 	RabbitMQ RabbitMQConf `mapstructure:"rabbitmq"`
+	Database DatabaseConf `mapstructure:"database"`
 }
 
 // LoggerConf configures the logger.
@@ -23,12 +24,18 @@ type RabbitMQConf struct {
 	DSN string `mapstructure:"dsn"`
 }
 
+// DatabaseConf holds the PostgreSQL DSN for recording sent notifications.
+type DatabaseConf struct {
+	DSN string `mapstructure:"dsn"`
+}
+
 // LoadConfig reads configuration from path and applies SENDER_ env overrides.
 func LoadConfig(path string) (Config, error) {
 	v := viper.New()
 
 	v.SetDefault("logger.level", "info")
 	v.SetDefault("rabbitmq.dsn", "amqp://rabbit:password@localhost:5672/")
+	v.SetDefault("database.dsn", "")
 
 	if path != "" {
 		v.SetConfigFile(path)

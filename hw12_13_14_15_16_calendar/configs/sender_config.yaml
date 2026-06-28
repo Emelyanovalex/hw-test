@@ -3,3 +3,8 @@ logger:
 
 rabbitmq:
   dsn: "amqp://rabbit:password@localhost:5672/"
+
+database:
+  # Used to record sent notifications in notifications_sent table.
+  # Example: postgres://postgres:password@localhost:5435/calendar?sslmode=disable
+  dsn: ""
