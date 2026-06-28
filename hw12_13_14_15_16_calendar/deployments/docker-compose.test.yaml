@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  integration-tests:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile.integration
+    environment:
+      CALENDAR_HTTP_URL: "http://calendar:8080"
+      INTEGRATION_DB_DSN: "postgres://postgres:password@postgres:5432/calendar?sslmode=disable"
+    depends_on:
+      calendar:
+        condition: service_healthy
+      scheduler:
+        condition: service_started
+      sender:
+        condition: service_started
