@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "calendar-chart.fullname" . }}-sender
+  labels:
+    {{- include "calendar-chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: sender
+spec:
+  replicas: {{ .Values.sender.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: sender
+  template:
+    metadata:
+      labels:
+        {{- include "calendar-chart.labels" . | nindent 8 }}
+        app.kubernetes.io/component: sender
+    spec:
+      containers:
+        - name: sender
+          image: "{{ if .Values.image.registry }}{{ .Values.image.registry }}/{{ end }}{{ .Values.image.sender.repository }}:{{ .Values.image.sender.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: SENDER_LOGGER_LEVEL
+              value: {{ .Values.logger.level | quote }}
+            - name: SENDER_RABBITMQ_DSN
+              value: {{ .Values.rabbitmq.dsn | quote }}
+            - name: SENDER_DATABASE_DSN
+              value: {{ .Values.database.dsn | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

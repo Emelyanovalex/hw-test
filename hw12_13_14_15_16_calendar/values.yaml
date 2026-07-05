@@ -1,22 +1,58 @@
-replicaCount: 1
+# Default values for calendar-chart.
 
 image:
-  repository: my-calendar-app
-  tag: "latest"
+  registry: ""
   pullPolicy: IfNotPresent
+  calendar:
+    repository: calendar
+    tag: develop
+  scheduler:
+    repository: calendar-scheduler
+    tag: develop
+  sender:
+    repository: calendar-sender
+    tag: develop
+
+logger:
+  level: info
+
+# Allowed values: memory, sql
+storage:
+  kind: sql
+
+database:
+  dsn: "postgres://postgres:password@postgres:5432/calendar?sslmode=disable"
+
+rabbitmq:
+  dsn: "amqp://rabbit:password@rabbitmq:5672/"
+
+calendar:
+  replicaCount: 1
+  http:
+    port: 8080
+  grpc:
+    port: 9090
+
+scheduler:
+  replicaCount: 1
+  interval: 10s
+
+sender:
+  replicaCount: 1
 
 service:
   type: ClusterIP
-  port: 80
 
 ingress:
-  enabled: false
+  enabled: true
+  className: ""
   annotations: {}
-  hosts:
-    - host: chart-example.local
-      paths: []
+  host: calendar.local
+  path: /
+  pathType: Prefix
   tls: []
 
 resources: {}
 nodeSelector: {}
+tolerations: []
 affinity: {}
