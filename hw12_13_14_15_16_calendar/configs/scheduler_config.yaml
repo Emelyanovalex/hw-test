@@ -1,0 +1,16 @@
+logger:
+  level: info
+
+storage:
+  # Allowed values: memory, sql
+  kind: sql
+
+database:
+  # postgres://postgres:password@localhost:5435/calendar?sslmode=disable
+  dsn: ""
+
+rabbitmq:
+  dsn: "amqp://rabbit:password@localhost:5672/"
+
+scheduler:
+  interval: 10s

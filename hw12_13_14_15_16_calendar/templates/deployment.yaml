@@ -1,2 +1,65 @@
 apiVersion: apps/v1
 kind: Deployment
+metadata:
+  name: {{ include "calendar-chart.fullname" . }}-calendar
+  labels:
+    {{- include "calendar-chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: calendar
+spec:
+  replicas: {{ .Values.calendar.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: calendar
+  template:
+    metadata:
+      labels:
+        {{- include "calendar-chart.labels" . | nindent 8 }}
+        app.kubernetes.io/component: calendar
+    spec:
+      containers:
+        - name: calendar
+          image: "{{ if .Values.image.registry }}{{ .Values.image.registry }}/{{ end }}{{ .Values.image.calendar.repository }}:{{ .Values.image.calendar.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.calendar.http.port }}
+            - name: grpc
+              containerPort: {{ .Values.calendar.grpc.port }}
+          env:
+            - name: CALENDAR_LOGGER_LEVEL
+              value: {{ .Values.logger.level | quote }}
+            - name: CALENDAR_HTTP_PORT
+              value: {{ .Values.calendar.http.port | quote }}
+            - name: CALENDAR_GRPC_PORT
+              value: {{ .Values.calendar.grpc.port | quote }}
+            - name: CALENDAR_STORAGE_KIND
+              value: {{ .Values.storage.kind | quote }}
+            - name: CALENDAR_DATABASE_DSN
+              value: {{ .Values.database.dsn | quote }}
+          livenessProbe:
+            httpGet:
+              path: /events/day?date=2024-01-01
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /events/day?date=2024-01-01
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

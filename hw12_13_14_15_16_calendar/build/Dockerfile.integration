@@ -1,0 +1,12 @@
+FROM golang:1.23
+
+ENV CODE_DIR /go/src/
+WORKDIR ${CODE_DIR}
+
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+
+COPY . ${CODE_DIR}
+
+CMD ["go", "test", "-v", "-count=1", "-timeout=120s", "./tests/integration/..."]

@@ -1,7 +1,55 @@
 syntax = "proto3";
 
-package event;
+package calendar.v1;
+
+option go_package = "github.com/Emelyanovalex/hw12_calendar/api";
+
+service CalendarService {
+  rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse);
+  rpc UpdateEvent(UpdateEventRequest) returns (UpdateEventResponse);
+  rpc DeleteEvent(DeleteEventRequest) returns (DeleteEventResponse);
+  rpc ListEventsForDay(ListEventsRequest) returns (ListEventsResponse);
+  rpc ListEventsForWeek(ListEventsRequest) returns (ListEventsResponse);
+  rpc ListEventsForMonth(ListEventsRequest) returns (ListEventsResponse);
+}
 
 message Event {
-    // TODO
+  string id = 1;
+  string title = 2;
+  int64 start_time = 3;    // Unix timestamp in seconds
+  int64 duration = 4;      // Duration in nanoseconds
+  string description = 5;
+  string user_id = 6;
+  int64 notify_before = 7; // Duration in nanoseconds (0 = no notification)
+}
+
+message CreateEventRequest {
+  Event event = 1;
+}
+
+message CreateEventResponse {
+  Event event = 1;
+}
+
+message UpdateEventRequest {
+  string id = 1;
+  Event event = 2;
+}
+
+message UpdateEventResponse {
+  Event event = 1;
+}
+
+message DeleteEventRequest {
+  string id = 1;
+}
+
+message DeleteEventResponse {}
+
+message ListEventsRequest {
+  int64 date = 1; // Unix timestamp in seconds
+}
+
+message ListEventsResponse {
+  repeated Event events = 1;
 }

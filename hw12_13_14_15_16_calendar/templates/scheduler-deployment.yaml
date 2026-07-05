@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "calendar-chart.fullname" . }}-scheduler
+  labels:
+    {{- include "calendar-chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
+spec:
+  replicas: {{ .Values.scheduler.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: scheduler
+  template:
+    metadata:
+      labels:
+        {{- include "calendar-chart.labels" . | nindent 8 }}
+        app.kubernetes.io/component: scheduler
+    spec:
+      containers:
+        - name: scheduler
+          image: "{{ if .Values.image.registry }}{{ .Values.image.registry }}/{{ end }}{{ .Values.image.scheduler.repository }}:{{ .Values.image.scheduler.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: SCHEDULER_LOGGER_LEVEL
+              value: {{ .Values.logger.level | quote }}
+            - name: SCHEDULER_STORAGE_KIND
+              value: {{ .Values.storage.kind | quote }}
+            - name: SCHEDULER_DATABASE_DSN
+              value: {{ .Values.database.dsn | quote }}
+            - name: SCHEDULER_RABBITMQ_DSN
+              value: {{ .Values.rabbitmq.dsn | quote }}
+            - name: SCHEDULER_SCHEDULER_INTERVAL
+              value: {{ .Values.scheduler.interval | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

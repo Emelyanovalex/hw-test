@@ -1,1 +1,97 @@
-version: "3"
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: calendar
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "calendar"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbit
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile.migrate
+    environment:
+      GOOSE_DBSTRING: "postgres://postgres:password@postgres:5432/calendar?sslmode=disable"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  calendar:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    environment:
+      CALENDAR_STORAGE_KIND: sql
+      CALENDAR_DATABASE_DSN: "postgres://postgres:password@postgres:5432/calendar?sslmode=disable"
+    ports:
+      - "8888:8080"
+      - "9090:9090"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/events/day?date=2024-01-01"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  scheduler:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile.scheduler
+    environment:
+      SCHEDULER_STORAGE_KIND: sql
+      SCHEDULER_DATABASE_DSN: "postgres://postgres:password@postgres:5432/calendar?sslmode=disable"
+      SCHEDULER_RABBITMQ_DSN: "amqp://rabbit:password@rabbitmq:5672/"
+      SCHEDULER_SCHEDULER_INTERVAL: "5s"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+
+  sender:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile.sender
+    environment:
+      SENDER_RABBITMQ_DSN: "amqp://rabbit:password@rabbitmq:5672/"
+      SENDER_DATABASE_DSN: "postgres://postgres:password@postgres:5432/calendar?sslmode=disable"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+
+volumes:
+  postgres-data:
